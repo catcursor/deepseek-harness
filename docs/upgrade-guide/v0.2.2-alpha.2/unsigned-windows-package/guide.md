@@ -14,5 +14,5 @@ English | [中文](guide.zh.md)
 ## Migration
 
 1. Run the unsigned command on Windows x64 with Node 24 and the build tools listed in the [packaging guide](../../../../apps/desktop/packaging/README.md#unsigned-windows-test-installer); no release dotenv or policy service is needed.
-2. For this fork, push to `master` or dispatch [Fork Windows installer](../../../../.github/workflows/fork-windows-package.yml). Download the installer and checksum from the run's Artifacts section after it succeeds.
+2. For this fork, push to `master` or dispatch [Fork Windows installer](../../../../.github/workflows/fork-windows-package.yml). After it succeeds, download the installer and checksum from the GitHub Release tagged `windows-v<version>`; Actions also retains a copy for 14 days.
 3. Confirm that the filename ends in `-unsigned.exe` and the packaged metadata contains no `dshMandatoryUpdatePolicy` or update feed. Use manual installation for subsequent builds; unsigned artifacts cannot enter the signed publication workflow.

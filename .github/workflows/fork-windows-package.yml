@@ -3,6 +3,10 @@ name: Fork Windows installer
 on:
   push:
     branches: [master]
+    paths-ignore:
+      - .github/workflows/fork-windows-release.yml
+      - apps/desktop/packaging/README*
+      - docs/upgrade-guide/**
   workflow_dispatch:
 
 permissions:

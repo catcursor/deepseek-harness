@@ -14,5 +14,5 @@ description: "Windows 未签名打包忽略发布配置，并省略强制更新�
 ## 迁移
 
 1. 在 Windows x64 上使用 Node 24 和[打包指南](../../../../apps/desktop/packaging/README.zh.md#unsigned-windows-test-installer)列出的构建工具运行未签名命令；无需发布 dotenv 或策略服务。
-2. 在此 fork 中推送到 `master`，或手动触发 [Fork Windows installer](../../../../.github/workflows/fork-windows-package.yml)。成功后从运行页面的 Artifacts 下载安装包及校验和。
+2. 在此 fork 中推送到 `master`，或手动触发 [Fork Windows installer](../../../../.github/workflows/fork-windows-package.yml)。成功后从标签为 `windows-v<version>` 的 GitHub Release 下载安装包及校验和；Actions 也会保留副本 14 天。
 3. 确认文件名以 `-unsigned.exe` 结尾，打包元数据不包含 `dshMandatoryUpdatePolicy` 或更新 feed。后续版本通过手动安装更新；未签名产物不能进入签名发布工作流。

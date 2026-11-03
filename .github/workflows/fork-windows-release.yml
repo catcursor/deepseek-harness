@@ -1,0 +1,122 @@
+name: Publish fork Windows release
+
+on:
+  workflow_run:
+    workflows: [Fork Windows installer]
+    branches: [master]
+    types: [completed]
+  push:
+    branches: [master]
+    paths: [.github/workflows/fork-windows-release.yml]
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Successful Windows installer run ID; blank selects the latest successful run
+        type: string
+        required: false
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: fork-windows-release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: >-
+      github.repository == 'catcursor/deepseek-harness' &&
+      (github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Select and validate the successful installer build
+        id: build
+        env:
+          REQUESTED_RUN_ID: ${{ github.event.workflow_run.id || inputs.run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_run="$REQUESTED_RUN_ID"
+          if [[ -z "$source_run" ]]; then
+            source_run=$(gh run list --workflow fork-windows-package.yml --branch master --status success --limit 1 --json databaseId --jq '.[0].databaseId')
+          fi
+          [[ "$source_run" =~ ^[1-9][0-9]*$ ]]
+          gh api "repos/$GH_REPO/actions/runs/$source_run" > "$RUNNER_TEMP/source-run.json"
+          jq -e --arg repository "$GH_REPO" '
+            .path == ".github/workflows/fork-windows-package.yml" and
+            .head_repository.full_name == $repository and .head_branch == "master" and
+            .status == "completed" and .conclusion == "success" and
+            (.event == "push" or .event == "workflow_dispatch")
+          ' "$RUNNER_TEMP/source-run.json"
+          source_sha=$(jq -er '.head_sha' "$RUNNER_TEMP/source-run.json")
+          [[ "$source_sha" =~ ^[0-9a-f]{40}$ ]]
+          artifact=$(gh api "repos/$GH_REPO/actions/runs/$source_run/artifacts" --jq '
+            [.artifacts[] | select(.expired == false and (.name | startswith("windows-x64-unsigned-")))] |
+            if length == 1 then .[0].name else error("Expected one unexpired Windows installer artifact") end')
+          version="${artifact#windows-x64-unsigned-}"
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]
+          {
+            echo "run_id=$source_run"
+            echo "sha=$source_sha"
+            echo "artifact=$artifact"
+            echo "version=$version"
+          } >> "$GITHUB_OUTPUT"
+      - name: Download the verified installer artifact
+        uses: actions/download-artifact@v8.0.1
+        with:
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.build.outputs.run_id }}
+          name: ${{ steps.build.outputs.artifact }}
+          path: ${{ runner.temp }}/windows-release
+      - name: Verify checksums and publish the release
+        shell: bash
+        env:
+          PACKAGE_VERSION: ${{ steps.build.outputs.version }}
+          SOURCE_SHA: ${{ steps.build.outputs.sha }}
+          SOURCE_RUN: ${{ steps.build.outputs.run_id }}
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/windows-release"
+          installer="deepseek-harness-$PACKAGE_VERSION-win-x64-unsigned.exe"
+          tag="windows-v$PACKAGE_VERSION"
+          test -f "$installer"
+          test -f SHA256SUMS.txt
+          checksum_line=$(tr -d '\r' < SHA256SUMS.txt)
+          [[ "${checksum_line:66}" == "$installer" ]]
+          printf '%s\n' "$checksum_line" | sha256sum --check --strict -
+          if ! tag_sha=$(gh api "repos/$GH_REPO/git/ref/tags/$tag" --jq '.object.sha' 2> "$RUNNER_TEMP/tag-error.log"); then
+            if ! grep -q 'HTTP 404' "$RUNNER_TEMP/tag-error.log"; then
+              cat "$RUNNER_TEMP/tag-error.log" >&2
+              exit 1
+            fi
+            gh api --method POST "repos/$GH_REPO/git/refs" -f "ref=refs/tags/$tag" -f "sha=$SOURCE_SHA" --silent
+            tag_sha="$SOURCE_SHA"
+          fi
+          [[ "$tag_sha" == "$SOURCE_SHA" ]]
+          if ! gh release view "$tag" --json isDraft > "$RUNNER_TEMP/release-state.json"; then
+            {
+              echo 'Windows x64 unsigned installer with SHA256 checksums.'
+              echo
+              echo "Source: $GITHUB_SERVER_URL/$GH_REPO/commit/$SOURCE_SHA"
+              echo "Build: $GITHUB_SERVER_URL/$GH_REPO/actions/runs/$SOURCE_RUN"
+              echo
+              echo 'Automatic update services are omitted; install newer builds manually.'
+            } > "$RUNNER_TEMP/release-notes.md"
+            gh release create "$tag" --verify-tag --target "$SOURCE_SHA" --draft --prerelease \
+              --title "DSH Windows $PACKAGE_VERSION (unsigned)" --notes-file "$RUNNER_TEMP/release-notes.md"
+            gh release view "$tag" --json isDraft > "$RUNNER_TEMP/release-state.json"
+          fi
+          if jq -e '.isDraft == false' "$RUNNER_TEMP/release-state.json" > /dev/null; then
+            gh release view "$tag" --json assets | jq -e --arg installer "$installer" '
+              [.assets[].name] | (index($installer) != null and index("SHA256SUMS.txt") != null)'
+          else
+            gh release upload "$tag" "$installer" SHA256SUMS.txt --clobber
+            gh release edit "$tag" --draft=false --prerelease
+          fi
+          gh release view "$tag" --json url --jq '.url' >> "$GITHUB_STEP_SUMMARY"
