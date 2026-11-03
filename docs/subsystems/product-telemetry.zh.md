@@ -2,11 +2,11 @@
 
 [English](product-telemetry.md) | 中文
 
-[产品埋点插件](../../packages/host/product-telemetry-otel/README.zh.md) 通过 OTLP/HTTP 发送明确选定的分析事件。`productTelemetry` 服务仅负责提交；产品消费方决定事件发生时机与获准采集的字段。导出器不自动采集 Session 数据或标识。[桌面埋点消费方](../../packages/client/product-analytics/README.zh.md)选择交互与实时压缩事件，补充缓存的静态环境和可用的登录身份，并遵守桌面启动时的采集开关。普通 Web 客户端不采集产品事件。
+[产品埋点插件](../../packages/host/product-telemetry-otel/README.zh.md)与[桌面埋点消费方](../../packages/client/product-analytics/README.zh.md)保留本地兼容接口。它们不采集操作、环境信息或账号身份，不创建导出器，也不发送 RPC 或 OTLP 请求。旧配置无法恢复采集。
 
-`ProductTelemetryRecord` 要求事件名称、字符串 body 和 Unix 毫秒时间戳。属性接受字符串、数字、布尔标量，以及这些值组成的单层对象（`ProductTelemetryScalar`）。可选的严重程度使用 OTel 严重程度数字，默认为 INFO。记录入队时填写观测时间。
+保留 `ProductTelemetryRecord` 和 `ProductTelemetryScalar` 以兼容调用方。接收但丢弃记录，不进行序列化、缓冲或重试。
 
-入队同步完成，不代表送达确认。SDK 负责批量发送与重试；发送失败会产生本地诊断。配置、退出和丢失限制见包 README。
+`emit()` 同步完成。此服务没有采集端、队列或关闭任务。
 
 ## 记录类型
 
@@ -44,20 +44,18 @@ Authenticated event intake; disabled instances do not inspect identity or accept
 @Remote enabled(): boolean
 
 /**
- * Stream the effective policy initially and after live configuration edits.
+ * Stream disabled status until cancellation or disposal.
  * @param signal - subscriber lifetime.
  * @returns current policy values until cancellation or service disposal.
  */
 @Remote({ mode: 'stream' }) async *watchPolicy(signal: AbortSignal): AsyncIterable<boolean>
 
 /**
- * Submit selected Desktop fields with cached static environment and fresh identity.
- * The first intake waits for bounded environment queries; concurrent intakes share them.
- * Missing identity is omitted; failed environment fields carry fixed reasons.
- * @param event - typed product event without message contents or credentials.
- * @returns after local submission; no delivery or warehouse acknowledgement.
+ * Discard legacy events without querying identity, hardware, or an exporter.
+ * @param _event - obsolete Desktop analytics event.
+ * @returns immediate local completion.
  */
-@Remote async report(event: ProductEvent): Promise<void>
+@Remote report(_event: ProductEvent): Promise<void>
 ```
 
 Source: [`packages/client/product-analytics/src/index.ts`](../../packages/client/product-analytics/src/index.ts)
@@ -66,15 +64,14 @@ Source: [`packages/client/product-analytics/src/index.ts`](../../packages/client
 
 ### `ctx.productTelemetry` — `ProductTelemetry`
 
-Host analytics sender. Mounting alone sends nothing; the owning fiber drains it on unload.
+Compatibility sink for removed Desktop analytics; creates no exporter or queue.
 
 ```ts cordis-catalog
 /**
- * Enqueue one selected product event without waiting for network delivery.
- * Queue admission and shutdown completion are not collector or warehouse acknowledgements.
- * @param record - caller-owned event containing only approved analytics fields.
+ * Discard an event without collection or upload.
+ * @param _record - obsolete event fields.
  */
-emit(record: ProductTelemetryRecord): void
+emit(_record: ProductTelemetryRecord): void
 ```
 
 Source: [`packages/host/product-telemetry-otel/src/index.ts`](../../packages/host/product-telemetry-otel/src/index.ts)

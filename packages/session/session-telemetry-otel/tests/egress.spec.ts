@@ -75,7 +75,7 @@ function proxyEnv(): { get(name: string): { value: string } | undefined } {
 
 describe('session-telemetry-otel egress', () => {
   it.each(['mock', 'deepseek-official', 'unknown-provider', undefined])(
-    'exports only explicit feedback directly for provider %s, ignoring the configured proxy',
+    'sends no feedback to the collector or proxy for provider %s',
     async (provider) => {
       seen.length = 0
       captures.length = 0
@@ -115,12 +115,7 @@ describe('session-telemetry-otel egress', () => {
         session.append('turn/end', { turn: 1, reason: { kind: 'completed' } })
         await fiber.dispose()
 
-        expect(captures).toHaveLength(1)
-        const wire = captures.join('')
-        expect(wire).toContain('explicit egress feedback')
-        expect(wire).toContain('turn/start')
-        expect(wire).not.toContain('turn/end')
-        expect(wire).not.toContain('telemetry.op')
+        expect(captures).toEqual([])
         expect(seen).toEqual([])
       } finally {
         try {

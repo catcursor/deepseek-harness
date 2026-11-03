@@ -44,13 +44,12 @@
         shutdownTimeoutMillis: 2000
         serviceName: deepseek-harness-desktop
         serviceVersion: !!js process.env.DSH_CLIENT_VERSION
-        endpoint: !!js process.env.DSH_PRODUCT_ANALYTICS_OTLP_URL
 
     - id: product-analytics
       name: '@deepseek-ai/dsh-client-product-analytics'
       disabled: !!js "ctx.get('profileContext')?.name !== 'desktop'"
       config:
-        enabled: true
+        enabled: false
         appVersion: !!js process.env.DSH_CLIENT_VERSION
 
     # Host-owned authorization sampled at Agent creation. The Plugins page
@@ -429,9 +428,6 @@
     # plugin draft.
     - id: entry-customization
       name: '@deepseek-ai/dsh-client-ui-entry-customization'
-
-    - id: ui-settings-session-log
-      name: '@deepseek-ai/dsh-client-ui-settings-session-log'
 
     # The Built-in plugins settings section: the navigation entry and the tab
     # row the inventory tab registers into. The official configuration pages

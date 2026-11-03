@@ -3,29 +3,29 @@
 # After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/session/session-log-deepseek/README.md
 /:
-  en: 29b2294131f1a592
-  zh: 6d7f4fa9e1f46943
+  en: f533b8f639131a02
+  zh: 1e4b2c1f2d241597
 /deepseek-ai-dsh-session-log-deepseek:
   en: 6d991785cbfd70ae
   zh: 0918e2462821cde4
 /deepseek-ai-dsh-session-log-deepseek/summary:
-  en: 19c182dbd7d8e064
-  zh: 51c043d6ea52db0d
+  en: 989c6b4b69b34c28
+  zh: b58d27decf8e63c4
 /deepseek-ai-dsh-session-log-deepseek/table-of-contents:
-  en: eb945093933ee19b
-  zh: 7a40fe2e98a491c5
+  en: 30902a983fa789c6
+  zh: e0c1b53208f0c515
 /deepseek-ai-dsh-session-log-deepseek/configuration:
-  en: 1b899e63d8039643
-  zh: d489461bbb618b5d
+  en: b463be890c4d8928
+  zh: 5b19e8b5c50a4261
 /deepseek-ai-dsh-session-log-deepseek/request-field:
-  en: f11095717a9aec6f
-  zh: fb872499eea955be
+  en: af878711861369d1
+  zh: 94e66ad5a3b16746
 /deepseek-ai-dsh-session-log-deepseek/upload-exclusions:
-  en: 9d303e05a05a8737
-  zh: 8b12d1e7a2d04060
+  en: 7e95774e9d197a9d
+  zh: cb9424310a164db2
 /deepseek-ai-dsh-session-log-deepseek/acceptance-and-retry:
-  en: 6997969916bb1b42
-  zh: 929fd0485278ff8b
+  en: fc408547a8eb28eb
+  zh: 9b09665c1be0430d
 /deepseek-ai-dsh-session-log-deepseek/model-experience:
   en: 215e7ba838619b7b
   zh: a311da3843709f90
@@ -33,17 +33,17 @@
   en: 468b9eaee350f6e2
   zh: c192ad6228e7044d
 /deepseek-ai-dsh-session-log-deepseek/model-experience/session-log-metadata/what-the-model-sees:
-  en: 89fef23a54a0f9d6
-  zh: fd17806f1df6083e
+  en: 4a12bcd5c3cc17b9
+  zh: 3077bb3d33c91f8d
 /deepseek-ai-dsh-session-log-deepseek/model-experience/session-log-metadata/token-effect:
-  en: 6a1bb7bbc7db7f06
-  zh: 94ddaa773b7538f7
+  en: d0fdf302c94f7ee1
+  zh: fe2931812c2adc76
 /deepseek-ai-dsh-session-log-deepseek/model-experience/session-log-metadata/kv-cache-effect:
-  en: dcf00aa1af688f09
-  zh: df5851d66c3a6b4f
+  en: 98783c6badc3a59a
+  zh: 565478ca00e6bd28
 /deepseek-ai-dsh-session-log-deepseek/known-limitations-and-deferred-work:
-  en: 249ef8dbc237a0c2
-  zh: c169d64ce9ab984c
+  en: d6a7943d30b4351e
+  zh: fd1d89832e092d1b
 /deepseek-ai-dsh-session-log-deepseek/known-limitations-and-deferred-work/dev-note:
-  en: e67f633dc6fe7773
-  zh: e88aeb617ffb74ea
+  en: 0a1253c6f7b5e8b9
+  zh: 9f56528562c7c914

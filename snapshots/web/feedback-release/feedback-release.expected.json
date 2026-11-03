@@ -1,6 +1,6 @@
 {
-  "mode": "FEEDBACK_ONLY",
-  "eventName": "session-log",
+  "mode": "DISABLED",
+  "eventName": null,
   "feedback": [
     {
       "type": "feedback/record",
@@ -27,22 +27,9 @@
     }
   ],
   "laterSubmissionSuffixes": [
-    [
-      "command/done",
-      "model/selection",
-      "model/selection",
-      "command/run",
-      "feedback/record"
-    ],
-    [
-      "command/done",
-      "feedback/message-put"
-    ],
-    [
-      "feedback/message-put"
-    ],
-    [
-      "feedback/message-delete"
-    ]
+    [],
+    [],
+    [],
+    []
   ]
 }

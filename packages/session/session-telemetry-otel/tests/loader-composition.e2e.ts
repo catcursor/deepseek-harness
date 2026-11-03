@@ -4,7 +4,6 @@
  * only the redacted authorized prefix; the canonical log keeps every event.
  */
 
-import type { SessionEvent } from '@deepseek-ai/dsh-session'
 import { readFile, readdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -22,7 +21,6 @@ const configPath = fileURLToPath(new URL(
 const repoTsconfig = fileURLToPath(new URL('../../../../tsconfig.json', import.meta.url))
 
 const FIXTURE_SECRET = 'sk-e2efixture1234567890'
-const FIXTURE_PLACEHOLDER = '[E2E-REDACTED]'
 
 interface OtlpLogRecord {
   eventName: string
@@ -61,123 +59,18 @@ async function readFixtureOutput(cwd: string): Promise<FixtureOutput> {
   return { captures, logContent: await readFile(logs[0] as string, 'utf8') }
 }
 
-function allRecords(captures: OtlpCapture[]) {
-  return captures.flatMap(capture => capture.resourceLogs.flatMap(resource =>
-    resource.scopeLogs.flatMap(scoped => scoped.logRecords.map(record => ({ scope: scoped.scope.name, record })))))
-}
-
-function eventTypes(captures: OtlpCapture[]): string[] {
-  return allRecords(captures).flatMap(({ record }) =>
-    record.attributes?.flatMap(attribute =>
-      attribute.key === 'event.type' && typeof attribute.value['stringValue'] === 'string'
-        ? [attribute.value['stringValue']]
-        : []) ?? [])
-}
-
-describe('session-telemetry-otel through the production headless profile', () => {
-  it('continues the headless task without telemetry when FULL is rejected', async () => {
-    const { stdout, stderr } = await runLoaderSmoke({
-      label: 'session-telemetry-otel rejected FULL loader smoke',
-      tempDirPrefix: 'telemetry-otel-full-e2e-',
-      binScript: driver,
-      libBinScript: driver,
-      configPath,
-      tsconfigPath: repoTsconfig,
-      env: { DSH_TELEMETRY_E2E_MODE: 'FULL' },
-    })
-    expect(stdout + stderr).toContain('warning: 1 entry did not activate')
-    expect(stdout + stderr).toContain('FULL')
-  }, LOADER_SMOKE_TEST_TIMEOUT_MS)
-
-  it('exports the redacted feedback-authorized prefix while the canonical log keeps the secret', async () => {
+describe('removed session upload through the production headless profile', () => {
+  it.each(['FEEDBACK_ONLY', 'DISABLED'])('retains feedback locally without uploads for legacy mode %s', async (mode) => {
     let output!: FixtureOutput
     const { stderr } = await runLoaderSmoke({
-      label: 'session-telemetry-otel loader smoke',
-      tempDirPrefix: 'telemetry-otel-e2e-',
-      binScript: driver,
-      libBinScript: driver,
-      configPath,
-      tsconfigPath: repoTsconfig,
+      label: 'local-only feedback', tempDirPrefix: 'telemetry-removed-e2e-',
+      binScript: driver, libBinScript: driver, configPath,
+      tsconfigPath: repoTsconfig, env: { DSH_TELEMETRY_E2E_MODE: mode },
       inspect: async (cwd) => { output = await readFixtureOutput(cwd) },
     })
     expect(stderr).not.toContain('UNHANDLED')
-
-    const records = allRecords(output.captures)
-    expect(records.length).toBeGreaterThan(0)
-    for (const { record } of records) {
-      expect(record.eventName).toBe('session-log')
-      expect(record.attributes?.find(attribute => attribute.key === 'sessionId')?.value.stringValue).toBeTypeOf('string')
-      const content = record.attributes?.find(attribute => attribute.key === 'content')?.value.stringValue
-      expect(typeof content).toBe('string')
-      const event = JSON.parse(content as string) as SessionEvent
-      expect(event.type).toBeTypeOf('string')
-      expect(event.seq).toBeTypeOf('number')
-      expect(event.time).toBeTypeOf('number')
-      expect(event).toHaveProperty('data')
-    }
-
-    const types = eventTypes(output.captures)
-    for (const expected of ['turn/start', 'user/message', 'tool/call', 'tool/result', 'assistant/message', 'turn/end']) {
-      expect(types, expected).toContain(expected)
-    }
-    const canonicalEvents = output.logContent.trim().split('\n')
-      .map(line => JSON.parse(line) as { type: string; seq?: number })
-      .filter(event => event.seq !== undefined)
-    const feedbackIndex = canonicalEvents.findIndex(event => event.type === 'feedback/record')
-    expect(feedbackIndex).toBeGreaterThanOrEqual(0)
-    expect(types).toEqual(canonicalEvents.slice(0, feedbackIndex + 1).map(event => event.type))
-    expect(types.at(-1)).toBe('feedback/record')
-    expect(records.some(({ scope }) => scope.endsWith('/ops'))).toBe(false)
-
-    const wire = JSON.stringify(output.captures)
-    expect(wire).not.toContain(FIXTURE_SECRET)
-    expect(wire).toContain(FIXTURE_PLACEHOLDER)
-    expect(wire).toContain('prove telemetry with key')
-    expect(wire).toContain('fixture feedback')
-    expect(wire).not.toContain('post-feedback private suffix')
-    expect(wire).not.toContain('private operational error')
-    expect(wire).not.toContain('telemetry.op')
-
-    expect(output.logContent).toContain('post-feedback private suffix')
+    expect(output.captures).toEqual([])
     expect(output.logContent).toContain(FIXTURE_SECRET)
-    expect(output.logContent).not.toContain(FIXTURE_PLACEHOLDER)
-  }, LOADER_SMOKE_TEST_TIMEOUT_MS)
-
-  it('never captures ordinary turns or shutdown without new feedback', async () => {
-    let output!: FixtureOutput
-    const { stderr } = await runLoaderSmoke({
-      label: 'session-telemetry-otel no-feedback loader smoke',
-      tempDirPrefix: 'telemetry-otel-no-feedback-e2e-',
-      binScript: driver,
-      libBinScript: driver,
-      configPath,
-      tsconfigPath: repoTsconfig,
-      env: { DSH_TELEMETRY_E2E_FEEDBACK: 'none' },
-      inspect: async (cwd) => { output = await readFixtureOutput(cwd) },
-    })
-    expect(stderr).not.toContain('UNHANDLED')
-    expect(output.captures).toEqual([])
-    expect(output.logContent).toContain('prove telemetry with key')
-    expect(output.logContent).toContain('post-feedback private suffix')
-    expect(output.logContent).not.toContain('feedback/record')
-  }, LOADER_SMOKE_TEST_TIMEOUT_MS)
-
-  it('keeps disabled feedback local and prints the stable warning', async () => {
-    let output!: FixtureOutput
-    const { stdout } = await runLoaderSmoke({
-      label: 'session-telemetry-otel disabled loader smoke',
-      tempDirPrefix: 'telemetry-otel-disabled-e2e-',
-      binScript: driver,
-      libBinScript: driver,
-      configPath,
-      tsconfigPath: repoTsconfig,
-      env: { DSH_TELEMETRY_E2E_MODE: 'DISABLED' },
-      inspect: async (cwd) => { output = await readFixtureOutput(cwd) },
-    })
-
-    expect(output.captures).toEqual([])
-    expect(output.logContent).toContain('fixture feedback')
-    expect(stdout.match(/OpenTelemetry session upload is DISABLED; this feedback is not uploaded through OpenTelemetry/)?.[0])
-      .toMatchInlineSnapshot('"OpenTelemetry session upload is DISABLED; this feedback is not uploaded through OpenTelemetry"')
+    expect(output.logContent).toContain('feedback/record')
   }, LOADER_SMOKE_TEST_TIMEOUT_MS)
 })

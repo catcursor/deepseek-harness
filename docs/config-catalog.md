@@ -519,14 +519,13 @@ export interface Config {
 
 ## `@deepseek-ai/dsh-client-product-analytics`
 
-- `inject`: `deepseekAccount` · `productTelemetry`
 - `refs`: `Volatile` (`@deepseek-ai/cordis`)
-- `source`: [`packages/client/product-analytics/src/index.ts:15`](../packages/client/product-analytics/src/index.ts)
+- `source`: [`packages/client/product-analytics/src/index.ts:14`](../packages/client/product-analytics/src/index.ts)
 
 ```ts config-catalog
 /** Application-owned collection policy; no user settings surface. */
 export interface Config {
-  /** Live application collection policy; ordinary Web does not mount this service. */
+  /** Legacy option; ignored even when true. */
   enabled: Volatile<boolean>
   /** Running Desktop release, absent when unavailable. */
   appVersion?: string
@@ -1803,11 +1802,10 @@ export interface Config {
 
 ## `@deepseek-ai/dsh-host-product-telemetry-otel`
 
-- `inject`: `otel`
-- `source`: [`packages/host/product-telemetry-otel/src/index.ts:18`](../packages/host/product-telemetry-otel/src/index.ts)
+- `source`: [`packages/host/product-telemetry-otel/src/index.ts:16`](../packages/host/product-telemetry-otel/src/index.ts)
 
 ```ts config-catalog
-/** Collector routing, application identity, and bounded in-memory batch settings. */
+/** Legacy options parsed for existing profiles; all transport settings are ignored. */
 export interface Config {
   /** Full HTTP(S) logs URL. */
   endpoint: string
@@ -3000,20 +2998,15 @@ export interface JsonRpcConfig {
 
 ## `@deepseek-ai/dsh-session-log-deepseek`
 
-- `inject`: `deepseekLlmApiExtensions` · `sessions`
 - `refs`: `Volatile` (`@deepseek-ai/cordis`)
-- `source`: [`packages/session/session-log-deepseek/src/index.ts:47`](../packages/session/session-log-deepseek/src/index.ts)
+- `source`: [`packages/session/session-log-deepseek/src/index.ts:21`](../packages/session/session-log-deepseek/src/index.ts)
 
 ```ts config-catalog
-/** Session-log request contribution configuration. */
+/** Legacy configuration accepted without enabling uploads. */
 export interface Config {
-  /** Contribute `dsh_session_log` to official DeepSeek requests. Defaults to `true`. */
+  /** Ignored; Session-log contribution has been removed. */
   enabled: Volatile<boolean>
-  /**
-   * Largest serialized `dsh_session_log` field, in UTF-8 bytes, that one request carries.
-   * A request uploads the longest pending event prefix that fits; later requests continue
-   * after its acceptance. Defaults to 8 MiB.
-   */
+  /** Legacy byte limit, unused because no log is serialized. */
   maxBytes: number
 }
 ```
@@ -3173,41 +3166,28 @@ export interface Config {
 
 ## `@deepseek-ai/dsh-session-telemetry-otel`
 
-- `inject`: `sessions` · `otel`
 - `refs`: [`LogExporterOptions`](../packages/telemetry/otel/src/index.ts) · [`SessionLogProcessorOptions`](../packages/telemetry/otel/src/index.ts)
-- `source`: [`packages/session/session-telemetry-otel/src/index.ts:85`](../packages/session/session-telemetry-otel/src/index.ts)
+- `source`: [`packages/session/session-telemetry-otel/src/index.ts:18`](../packages/session/session-telemetry-otel/src/index.ts)
 
 ```ts config-catalog
-/**
- * Plugin configuration: sharing policy, SDK transport options, byte/count queue
- * settings, and an overall shutdown bound. Uploading modes validate their endpoint
- * and shutdown deadline at plugin load; `DISABLED` reads neither.
- */
+/** Legacy options parsed for existing profiles; no value enables capture or transport. */
 export interface Config {
-  /** Defaults to `FEEDBACK_ONLY`: capture session history only when feedback is explicitly submitted. */
+  /** Ignored sharing request; the backend always reports disabled. */
   mode?: SessionTelemetryMode
-  /**
-   * Explicit SDK HTTP transport settings, including optional routing headers.
-   * Ambient credentials are not inherited. URL is required while uploading.
-   * Exporter self-observability metering is not supported.
-   */
+  /** Ignored exporter configuration, including collector URL and headers. */
   exporter?: Omit<LogExporterOptions, 'url'> & {
-    /** Full logs endpoint (e.g. `https://collector.example.com/v1/logs`). Required outside `DISABLED`; validated at load. */
+    /** Ignored legacy collector URL; no connection is opened. */
     url?: string
   }
-  /**
-   * Count, queue, cadence, and per-request watchdog settings for the byte-bounded
-   * processor. A watchdog warning never releases an unsettled transport slot.
-   * SDK processor self-observability metering is not supported.
-   */
+  /** Ignored queue and timer configuration; no queue or timers are created. */
   processor?: SessionLogProcessorOptions
-  /** Maximum time spent awaiting the SDK provider's complete shutdown path. */
+  /** Ignored shutdown allowance; there is no pending upload. */
   shutdownTimeoutMillis?: number
-  /** Uncompressed OTLP request byte limit, at most 4,000,000. */
+  /** Ignored legacy request-size limit. */
   maxRequestBytes?: number
 }
 
-/** Session-sharing policy selected by {@link Config.mode}. */
+/** Legacy mode values accepted by existing profiles; neither enables collection. */
 export enum SessionTelemetryMode {
   FEEDBACK_ONLY = 'FEEDBACK_ONLY',
   DISABLED = 'DISABLED',

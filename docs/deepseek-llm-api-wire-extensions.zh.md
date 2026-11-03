@@ -2,6 +2,8 @@
 
 [English](deepseek-llm-api-wire-extensions.md) | 中文
 
+此分支不再注册自动 `dsh_session_log` 上传；该字段的格式说明仅保留供历史集成参考。正常对话上下文仍发送到所选模型地址，插件清单和请求标头保留现有行为。
+
 本参考定义 [`@deepseek-ai/dsh-llm-deepseek`](../packages/llm/llm-deepseek/README.zh.md) 在 `deepseek-official` Messages 请求中发送的全部 DeepSeek Harness 专用 HTTP 标头与附加 JSON 字段。它不重新定义上游 DeepSeek API 自有字段。提供方无关的 LLM 接口与 `llm-pi-ai` 不实现这些扩展。
 
 适配器将这些扩展发送至已解析的 `baseURL`，包括已配置的网关。扩展位于 `messages`、系统提示词和工具 schema 之外，因此不会增加模型输入 token，也不会改变模型可见前缀。

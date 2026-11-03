@@ -1062,18 +1062,15 @@ Source: [`packages/api/session-controller/src/index.ts`](../../packages/api/sess
 
 ### `ctx.sessionLogDeepSeek` — `SessionLogDeepSeekService`
 
-Incremental Session-log contributor with caller-owned upload exclusions.
+Local compatibility registration; no request contributor or capture listener is installed.
 
 ```ts cordis-catalog
 /**
- * Exclude matching requests before reading or preparing their log contribution.
- * Any matching rule suppresses both the field and its acceptance callback. With
- * no matching rules, normal upload eligibility applies. A throwing rule fails
- * this contribution; the request-extension registry omits it and reports the error.
- * @param exclude - synchronous, side-effect-free predicate; `true` skips this upload.
- * @returns effect disposer that removes this registration when called or when the caller unloads.
+ * Accept a legacy exclusion without reading a Session or preparing an upload.
+ * @param _exclude - obsolete exclusion callback; never invoked.
+ * @returns an idempotent local disposer.
  */
-registerExclusion(exclude: SessionLogUploadExclusion): () => Promise<void>
+registerExclusion(_exclude: SessionLogUploadExclusion): () => Promise<void>
 ```
 
 Source: [`packages/session/session-log-deepseek/src/index.ts`](../../packages/session/session-log-deepseek/src/index.ts)

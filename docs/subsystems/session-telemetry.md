@@ -2,7 +2,7 @@
 
 English | [中文](session-telemetry.zh.md)
 
-The [capture service](../../packages/session/session-telemetry/README.md) owns canonical-event capture, redaction, and handoff cursors. The [feedback backend](../../packages/session/session-telemetry-otel/README.md) authorizes Session prefixes and owns their independent queue, per-request scheduling, and 4,000,000-byte ceiling. No reporting data reaches model requests.
+The [capture service](../../packages/session/session-telemetry/README.md) remains a generic extension API. This fork's [compatibility backend](../../packages/session/session-telemetry-otel/README.md) always reports disabled and registers no feedback listeners or exporters. Feedback and Session history stay local.
 
 Source: [`packages/session/session-telemetry/src/index.ts`](../../packages/session/session-telemetry/src/index.ts)
 
@@ -87,7 +87,7 @@ interface SessionTelemetryCaptureOptions {
 }
 ```
 
-`includeHistory` permits stored and inherited records but does not itself authorize capture. The [OTel backend](../../packages/session/session-telemetry-otel/README.md) uses on-demand capture and requires new own explicit feedback; it releases only the complete prefix through that feedback, for every provider.
+`includeHistory` is available to custom capture coordinators. The shipped compatibility backend does not instantiate a coordinator or capture any history.
 
 ## The backend contract
 
