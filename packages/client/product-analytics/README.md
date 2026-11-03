@@ -36,6 +36,7 @@ Existing UI callers may retain typed event names; no event is sent or retained.
 The Host has no account or exporter dependency and never samples environment metadata. The renderer creates no Remote policy stream or reporting request. Legacy Host policy streams report disabled until cancelled or disposed.
 
 <a id="model-experience"></a>
+
 <a id="kv-cache-effect"></a>
 ## Model Experience
 

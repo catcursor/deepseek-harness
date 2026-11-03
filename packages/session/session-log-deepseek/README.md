@@ -43,9 +43,13 @@ The plugin never registers `dsh_session_log`. Switching a local Session to the o
 `acceptedThrough()` remains available for reading historical acceptance events. The plugin creates no new acceptance event, pending queue, or retry.
 
 <a id="model-experience"></a>
+
 <a id="session-log-metadata"></a>
+
 <a id="what-the-model-sees"></a>
+
 <a id="token-effect"></a>
+
 <a id="kv-cache-effect"></a>
 ## Model Experience
 

@@ -1,0 +1,85 @@
+name: Fork Windows installer
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fork-windows-package-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package:
+    if: github.repository == 'catcursor/deepseek-harness'
+    runs-on: windows-2025
+    timeout-minutes: 120
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      DSH_TELEMETRY_DISABLED: '1'
+      DSH_GATE_CONCURRENCY: '1'
+      NODE_OPTIONS: --max-old-space-size=6144
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Enable long paths and symbolic links
+        run: |
+          git config --system core.longpaths true
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock" /t REG_DWORD /f /v "AllowDevelopmentWithoutDevLicense" /d 1
+          exit $LASTEXITCODE
+      - uses: pnpm/action-setup@v5.0.0
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: '24'
+          cache: pnpm
+      - uses: actions/setup-python@v6.3.0
+        with:
+          python-version: '3.13'
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Number the build
+        id: version
+        env:
+          PACKAGE_VERSION_MODE: auto
+        run: |
+          node --input-type=module -e "import fs from 'node:fs'; import { desktopCiVersion } from './apps/desktop/scripts/desktop-ci-version.mjs'; const base=JSON.parse(fs.readFileSync('package.json','utf8')).version; fs.appendFileSync(process.env.GITHUB_OUTPUT,'version='+desktopCiVersion(process.env,base)+'\n');"
+      - name: Check Windows packaging tools
+        run: pnpm run package:desktop:win:x64:unsigned --check
+      - name: Build installer and verify the bundled runtime
+        env:
+          PACKAGE_VERSION: ${{ steps.version.outputs.version }}
+        run: pnpm run package:desktop:win:x64:unsigned --build-version $env:PACKAGE_VERSION
+      - name: Write installer checksums
+        run: |
+          $directory = 'apps/desktop/.desktop-build/targets/win-x64/unsigned-artifacts'
+          $installers = @(Get-ChildItem -LiteralPath $directory -Filter '*-unsigned.exe' -File)
+          if ($installers.Count -eq 0) { throw 'Packaging produced no unsigned installer' }
+          $lines = $installers | ForEach-Object { "$((Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant())  $($_.Name)" }
+          $lines | Set-Content -LiteralPath (Join-Path $directory 'SHA256SUMS.txt') -Encoding ascii
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: windows-x64-unsigned-${{ steps.version.outputs.version }}
+          include-hidden-files: true
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            apps/desktop/.desktop-build/targets/win-x64/unsigned-artifacts/*-unsigned.exe
+            apps/desktop/.desktop-build/targets/win-x64/unsigned-artifacts/SHA256SUMS.txt
+      - name: Upload packaging diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: windows-package-logs-${{ github.run_id }}-${{ github.run_attempt }}
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 14
+          path: apps/desktop/.desktop-build/packaging-runs/

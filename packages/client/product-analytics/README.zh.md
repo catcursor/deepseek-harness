@@ -36,6 +36,7 @@ kind: "package-reference"
 主机端不依赖账号或导出器，也不采样环境元数据。渲染端不创建远程策略流或上报请求。旧主机策略流报告禁用状态，直到取消或清理。
 
 <a id="model-experience"></a>
+
 <a id="kv-cache-effect"></a>
 ## 模型体验
 

@@ -37,6 +37,7 @@ The class only registers its local service. Legacy transport settings are parsed
 [Product telemetry reference](../../../docs/subsystems/product-telemetry.md).
 
 <a id="model-experience"></a>
+
 <a id="kv-cache-effect"></a>
 ## Model Experience
 

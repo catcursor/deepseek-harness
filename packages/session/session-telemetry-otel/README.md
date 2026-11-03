@@ -77,6 +77,7 @@ No events are serialized or mapped to OTLP records.
 [Sharing service reference](../../../docs/subsystems/session-telemetry.md).
 
 <a id="model-experience"></a>
+
 <a id="kv-cache-effect"></a>
 ## Model Experience
 

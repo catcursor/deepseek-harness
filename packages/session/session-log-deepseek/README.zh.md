@@ -43,9 +43,13 @@ kind: "package-reference"
 保留 `acceptedThrough()` 以读取历史接受事件。插件不再创建新的接受事件、待发送队列或重试。
 
 <a id="model-experience"></a>
+
 <a id="session-log-metadata"></a>
+
 <a id="what-the-model-sees"></a>
+
 <a id="token-effect"></a>
+
 <a id="kv-cache-effect"></a>
 ## 模型体验
 

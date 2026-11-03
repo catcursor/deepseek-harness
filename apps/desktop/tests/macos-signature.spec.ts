@@ -138,12 +138,14 @@ describe('desktop macOS release signature', () => {
     }, 'win32')).toThrow(/DSH_DESKTOP_WINDOWS_CER_FILE/u)
   })
 
-  it('isolates unsigned Windows artifacts and omits updater metadata without release credentials', async () => {
+  it.each([true, false])('omits unsigned Windows update services with inherited policy = %s', async (inheritedPolicy) => {
     const { createElectronBuilderConfig } = await import('../electron-builder.config.mjs')
     const config = createElectronBuilderConfig({
       DSH_DESKTOP_APP_ID: RELEASE_ENVIRONMENT.DSH_DESKTOP_APP_ID,
-      DSH_DESKTOP_MANDATORY_UPDATE_TEST_ORIGIN: 'https://policy.example.com',
-      DSH_DESKTOP_MANDATORY_UPDATE_CONFIG: JSON.stringify({ allowedAuthOrigins: ['https://login.example.com'] }),
+      ...(inheritedPolicy ? {
+        DSH_DESKTOP_MANDATORY_UPDATE_TEST_ORIGIN: 'https://policy.example.com',
+        DSH_DESKTOP_MANDATORY_UPDATE_CONFIG: 'invalid inherited policy',
+      } : {}),
       DSH_DESKTOP_TARGET_PLATFORM: 'win32',
       DSH_DESKTOP_UNSIGNED: '1',
     }, 'win32', 'x64')
@@ -153,6 +155,7 @@ describe('desktop macOS release signature', () => {
       win: { forceCodeSigning: false, signtoolOptions: { sign: undefined } },
       publish: null,
     })
+    expect(config.extraMetadata).not.toHaveProperty('dshMandatoryUpdatePolicy')
   })
 
   it.each(['arm64', 'x64'])('builds local macOS %s DMGs without release credentials or update metadata', async (arch) => {
