@@ -90,25 +90,53 @@ jobs:
           checksum_line=$(tr -d '\r' < SHA256SUMS.txt)
           [[ "${checksum_line:66}" == "$installer" ]]
           printf '%s\n' "$checksum_line" | sha256sum --check --strict -
+          release_sha="$SOURCE_SHA"
+          master_sha=$(gh api "repos/$GH_REPO/branches/master" --jq '.commit.sha')
+          [[ "$master_sha" =~ ^[0-9a-f]{40}$ ]]
+          if [[ "$master_sha" != "$SOURCE_SHA" ]]; then
+            gh api "repos/$GH_REPO/compare/$SOURCE_SHA...$master_sha" > "$RUNNER_TEMP/release-diff.json"
+            # GITHUB_TOKEN cannot tag a commit with workflows differing from master.
+            # Only verified publication/documentation changes may move the release tag forward.
+            if jq -e '
+              def publication_path:
+                . == ".github/workflows/fork-windows-release.yml" or
+                startswith("apps/desktop/packaging/README") or startswith("docs/upgrade-guide/");
+              def packaging_filter_only:
+                .filename == ".github/workflows/fork-windows-package.yml" and .patch != null and
+                ([.patch | split("\n")[] | select(startswith("+") or startswith("-"))] |
+                  length > 0 and all(.[]; IN("+    paths-ignore:",
+                    "+      - .github/workflows/fork-windows-release.yml",
+                    "+      - apps/desktop/packaging/README*", "+      - docs/upgrade-guide/**")));
+              .status == "ahead" and (.files | length < 300) and
+              all(.files[]; (.previous_filename // .filename) == .filename and
+                ((.filename | publication_path) or packaging_filter_only))
+            ' "$RUNNER_TEMP/release-diff.json" > /dev/null; then
+              release_sha="$master_sha"
+            elif jq -e 'any(.files[]; .filename | startswith(".github/workflows/"))' "$RUNNER_TEMP/release-diff.json" > /dev/null; then
+              echo 'The installer workflows differ from master; wait for the latest installer build.' >&2
+              exit 1
+            fi
+          fi
           if ! tag_sha=$(gh api "repos/$GH_REPO/git/ref/tags/$tag" --jq '.object.sha' 2> "$RUNNER_TEMP/tag-error.log"); then
             if ! grep -q 'HTTP 404' "$RUNNER_TEMP/tag-error.log"; then
               cat "$RUNNER_TEMP/tag-error.log" >&2
               exit 1
             fi
-            gh api --method POST "repos/$GH_REPO/git/refs" -f "ref=refs/tags/$tag" -f "sha=$SOURCE_SHA" --silent
-            tag_sha="$SOURCE_SHA"
+            gh api --method POST "repos/$GH_REPO/git/refs" -f "ref=refs/tags/$tag" -f "sha=$release_sha" --silent
+            tag_sha="$release_sha"
           fi
-          [[ "$tag_sha" == "$SOURCE_SHA" ]]
+          [[ "$tag_sha" == "$SOURCE_SHA" || "$tag_sha" == "$release_sha" ]]
           if ! gh release view "$tag" --json isDraft > "$RUNNER_TEMP/release-state.json"; then
             {
               echo 'Windows x64 unsigned installer with SHA256 checksums.'
               echo
               echo "Source: $GITHUB_SERVER_URL/$GH_REPO/commit/$SOURCE_SHA"
+              echo "Release metadata: $GITHUB_SERVER_URL/$GH_REPO/commit/$release_sha"
               echo "Build: $GITHUB_SERVER_URL/$GH_REPO/actions/runs/$SOURCE_RUN"
               echo
               echo 'Automatic update services are omitted; install newer builds manually.'
             } > "$RUNNER_TEMP/release-notes.md"
-            gh release create "$tag" --verify-tag --target "$SOURCE_SHA" --draft --prerelease \
+            gh release create "$tag" --verify-tag --target "$release_sha" --draft --prerelease \
               --title "DSH Windows $PACKAGE_VERSION (unsigned)" --notes-file "$RUNNER_TEMP/release-notes.md"
             gh release view "$tag" --json isDraft > "$RUNNER_TEMP/release-state.json"
           fi

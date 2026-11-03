@@ -107,7 +107,7 @@ macOS 正式发布和本地未签名 DMG 都通过 [electron-builder 配置](../
 
 ## Windows Actions 打包
 
-[Fork Windows installer 工作流](../../../.github/workflows/fork-windows-package.yml) 使用 GitHub 托管的 `windows-2025`，在 `catcursor/deepseek-harness` 推送 `master` 时自动构建，也支持手动触发。仅修改发布工作流、打包 README 或升级指南时跳过重复构建。它无需签名证书、上游 runner 或发布凭据。完成后下载 `windows-x64-unsigned-<version>` 即可取得 EXE 和 `SHA256SUMS.txt`；产物和诊断日志保留 14 天。每次构建使用 UTC 日期、运行编号及尝试次数后缀。新推送会取消过时构建。这些未签名包省略两类更新服务。[发布工作流](../../../.github/workflows/fork-windows-release.yml)会将每次成功的 `master` 构建发布为 GitHub 预发布版本，标签为 `windows-v<version>`，可在 Releases 直接下载 EXE 和校验文件。Release 附件不使用 Actions 的 14 天保留期。更新发布工作流时也会补发最近一次成功构建；手动触发时可指定成功运行的 ID。已发布版本保留原有附件，不会覆盖。
+[Fork Windows installer 工作流](../../../.github/workflows/fork-windows-package.yml) 使用 GitHub 托管的 `windows-2025`，在 `catcursor/deepseek-harness` 推送 `master` 时自动构建，也支持手动触发。仅修改发布工作流、打包 README 或升级指南时跳过重复构建。它无需签名证书、上游 runner 或发布凭据。完成后下载 `windows-x64-unsigned-<version>` 即可取得 EXE 和 `SHA256SUMS.txt`；产物和诊断日志保留 14 天。每次构建使用 UTC 日期、运行编号及尝试次数后缀。新推送会取消过时构建。这些未签名包省略两类更新服务。[发布工作流](../../../.github/workflows/fork-windows-release.yml)会将每次成功的 `master` 构建发布为 GitHub 预发布版本，标签为 `windows-v<version>`，可在 Releases 直接下载 EXE 和校验文件。Release 附件不使用 Actions 的 14 天保留期。更新发布工作流时也会补发最近一次成功构建；手动触发时可指定成功运行的 ID。已发布版本保留原有附件，不会覆盖。Release 标签可能包含后续发布工作流、文档或构建触发过滤规则的变动；说明始终链接安装包实际使用的源码。
 
 runner 的受监督启动和恢复见 [Windows runner 机器准备](../windows-signing/README.zh.md#machine-setup)。
 
