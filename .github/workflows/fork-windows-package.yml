@@ -17,6 +17,35 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  privacy-browser:
+    if: github.repository == 'catcursor/deepseek-harness'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      DSH_TELEMETRY_DISABLED: '1'
+      DSH_GATE_CONCURRENCY: '1'
+      DSH_SNAPSHOT: replay
+      NODE_OPTIONS: --max-old-space-size=6144
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v5.0.0
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: '24'
+          cache: pnpm
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install Chromium
+        run: pnpm --filter @deepseek-ai/dsh-web-frontend exec playwright install --with-deps chromium
+      - name: Build the privacy test application
+        run: pnpm run build --profile local --serial
+      - name: Verify browser feedback and model requests stay free of Session-log uploads
+        run: >-
+          pnpm exec vitest run --config vitest.web.config.ts
+          apps/web/tests/session-log-upload.e2e.ts apps/web/tests/feedback-release.e2e.ts
+
   package:
     if: github.repository == 'catcursor/deepseek-harness'
     runs-on: windows-2025
@@ -48,10 +77,29 @@ jobs:
           python-version: '3.13'
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile
+      - name: Verify privacy and packaging regressions
+        run: >-
+          pnpm exec vitest run
+          packages/session/session-log-deepseek/tests/config.spec.ts
+          packages/session/session-log-deepseek/tests/upload.spec.ts
+          packages/session/session-log-deepseek/tests/feedback-composition.spec.ts
+          packages/session/session-telemetry-otel/tests/otel.spec.ts
+          packages/session/session-telemetry-otel/tests/egress.spec.ts
+          packages/host/product-telemetry-otel/tests/telemetry.spec.ts
+          packages/client/product-analytics/tests/collection.host.spec.ts
+          packages/client/product-analytics/tests/collection.client.spec.ts
+          packages/bundle/base/tests/base.spec.ts
+          packages/llm/llm-deepseek/tests/loader-composition.spec.ts
+          packages/experimental/translator/tests/deepseek.spec.ts
+          apps/desktop/tests/desktop-package-environment.spec.ts
+          apps/desktop/tests/macos-signature.spec.ts
+          apps/desktop/tests/package-target.spec.ts
+          apps/desktop/tests/package-target-stages.spec.ts
+          --maxWorkers=2
       - name: Number the build
         id: version
         env:
-          PACKAGE_VERSION_MODE: auto
+          PACKAGE_VERSION_MODE: build-number
         run: |
           node --input-type=module -e "import fs from 'node:fs'; import { desktopCiVersion } from './apps/desktop/scripts/desktop-ci-version.mjs'; const base=JSON.parse(fs.readFileSync('package.json','utf8')).version; fs.appendFileSync(process.env.GITHUB_OUTPUT,'version='+desktopCiVersion(process.env,base)+'\n');"
       - name: Check Windows packaging tools
